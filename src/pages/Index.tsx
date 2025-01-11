@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Camera, Download, Magic, Palette } from "lucide-react";
+import { ArrowRight, Camera, Download, Wand2, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -61,7 +61,7 @@ const Index = () => {
             className="bg-white text-primary hover:bg-gray-100"
           >
             <Link to="/create">
-              Create Your Portrait <Magic className="ml-2" />
+              Create Your Portrait <Wand2 className="ml-2" />
             </Link>
           </Button>
         </div>
