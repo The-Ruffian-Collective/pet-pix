@@ -8,6 +8,7 @@ import AuthModal from "@/components/AuthModal";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 import { UserMenu } from "@/components/UserMenu";
+import { UserCredits } from "@/components/UserCredits";
 
 const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -29,7 +30,6 @@ const Index = () => {
       }
     });
 
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
     });
@@ -47,14 +47,13 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       {/* Header with User Menu */}
-      <header className="absolute top-0 right-0 p-4">
+      <header className="absolute top-0 right-0 p-4 flex items-center gap-4">
         {user ? (
-          <UserMenu user={user} />
-        ) : (
-          <Button variant="ghost" onClick={() => setShowAuthModal(true)}>
-            Sign in
-          </Button>
-        )}
+          <>
+            <UserCredits />
+            <UserMenu user={user} />
+          </>
+        ) : null}
       </header>
 
       {/* Hero Section */}
@@ -66,11 +65,17 @@ const Index = () => {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Create one-of-a-kind pet portraits with AI. Transform your beloved companion into a stunning piece of art.
           </p>
-          <Button asChild size="lg" className="animate-float">
-            <Link to="/create" onClick={handleCreateClick}>
-              Start Creating <ArrowRight className="ml-2" />
-            </Link>
-          </Button>
+          {user ? (
+            <Button asChild size="lg" className="animate-float">
+              <Link to="/create">
+                Start Creating <ArrowRight className="ml-2" />
+              </Link>
+            </Button>
+          ) : (
+            <Button onClick={() => setShowAuthModal(true)} size="lg" className="animate-float">
+              Get Started <ArrowRight className="ml-2" />
+            </Button>
+          )}
         </div>
       </section>
 
@@ -105,16 +110,27 @@ const Index = () => {
           <p className="text-xl mb-8 opacity-90">
             Turn your furry friend into a masterpiece today.
           </p>
-          <Button
-            asChild
-            size="lg"
-            variant="secondary"
-            className="bg-white text-primary hover:bg-gray-100"
-          >
-            <Link to="/create" onClick={handleCreateClick}>
-              Create Your Portrait <Wand2 className="ml-2" />
-            </Link>
-          </Button>
+          {user ? (
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="bg-white text-primary hover:bg-gray-100"
+            >
+              <Link to="/create">
+                Create Your Portrait <Wand2 className="ml-2" />
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setShowAuthModal(true)}
+              size="lg"
+              variant="secondary"
+              className="bg-white text-primary hover:bg-gray-100"
+            >
+              Get Started <Wand2 className="ml-2" />
+            </Button>
+          )}
         </div>
       </section>
 
