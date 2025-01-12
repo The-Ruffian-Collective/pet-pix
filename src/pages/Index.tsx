@@ -1,41 +1,44 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Camera, Download, Wand2, Palette } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AuthModal from "@/components/AuthModal";
 import { useToast } from "@/hooks/use-toast";
+import { User } from "@supabase/supabase-js";
+import { UserMenu } from "@/components/UserMenu";
 
 const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
+      setUser(session?.user || null);
       if (event === 'SIGNED_IN') {
         setShowAuthModal(false);
-        navigate('/create');
         toast({
           title: "Welcome!",
           description: "You've successfully signed in.",
         });
       }
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
     });
 
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
+      setUser(session?.user || null);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [toast]);
 
   const handleCreateClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!isAuthenticated) {
+    if (!user) {
       e.preventDefault();
       setShowAuthModal(true);
     }
@@ -43,6 +46,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Header with User Menu */}
+      <header className="absolute top-0 right-0 p-4">
+        {user ? (
+          <UserMenu user={user} />
+        ) : (
+          <Button variant="ghost" onClick={() => setShowAuthModal(true)}>
+            Sign in
+          </Button>
+        )}
+      </header>
+
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto text-center">
