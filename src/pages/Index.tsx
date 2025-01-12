@@ -1,9 +1,46 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Camera, Download, Wand2, Palette } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import AuthModal from "@/components/AuthModal";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+      if (event === 'SIGNED_IN') {
+        setShowAuthModal(false);
+        navigate('/create');
+        toast({
+          title: "Welcome!",
+          description: "You've successfully signed in.",
+        });
+      }
+    });
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
+
+  const handleCreateClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      setShowAuthModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -16,7 +53,7 @@ const Index = () => {
             Create one-of-a-kind pet portraits with AI. Transform your beloved companion into a stunning piece of art.
           </p>
           <Button asChild size="lg" className="animate-float">
-            <Link to="/create">
+            <Link to="/create" onClick={handleCreateClick}>
               Start Creating <ArrowRight className="ml-2" />
             </Link>
           </Button>
@@ -60,12 +97,17 @@ const Index = () => {
             variant="secondary"
             className="bg-white text-primary hover:bg-gray-100"
           >
-            <Link to="/create">
+            <Link to="/create" onClick={handleCreateClick}>
               Create Your Portrait <Wand2 className="ml-2" />
             </Link>
           </Button>
         </div>
       </section>
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </div>
   );
 };

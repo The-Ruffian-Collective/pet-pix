@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const STYLE_OPTIONS = [
   { id: "watercolor", name: "Watercolor", description: "Soft, flowing watercolor style" },
@@ -18,6 +20,23 @@ const Create = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<string>("watercolor");
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/');
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to create portraits",
+          variant: "destructive",
+        });
+      }
+    };
+
+    checkAuth();
+  }, [navigate, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,7 +55,6 @@ const Create = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for submission logic
     toast({
       title: "Coming Soon!",
       description: "This feature will be available soon.",
