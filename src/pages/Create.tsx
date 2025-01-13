@@ -39,6 +39,10 @@ const Create = () => {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("File size should be less than 10MB");
+        return;
+      }
       setSelectedImage(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
@@ -53,10 +57,26 @@ const Create = () => {
   if (!user) return null;
 
   const styles = [
-    { id: "watercolor", name: "Watercolor" },
-    { id: "oil-painting", name: "Oil Painting" },
-    { id: "pop-art", name: "Pop Art" },
-    { id: "pencil-sketch", name: "Pencil Sketch" },
+    { 
+      id: "watercolor", 
+      name: "Watercolor",
+      description: "Soft, flowing colors that capture your pet's essence in a dreamy, artistic style."
+    },
+    { 
+      id: "oil-painting", 
+      name: "Oil Painting",
+      description: "Rich, textured brushstrokes that give your pet portrait a classical, timeless feel."
+    },
+    { 
+      id: "pop-art", 
+      name: "Pop Art",
+      description: "Bold, vibrant colors and patterns that transform your pet into a modern art icon."
+    },
+    { 
+      id: "pencil-sketch", 
+      name: "Pencil Sketch",
+      description: "Detailed, hand-drawn appearance that highlights your pet's features with elegant simplicity."
+    },
   ];
 
   return (
@@ -75,15 +95,29 @@ const Create = () => {
           {/* Upload Section */}
           <Card className="p-6">
             <h2 className="text-2xl font-semibold mb-4">1. Upload Your Pet Photo</h2>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-primary/20 rounded-lg p-8 hover:border-primary/50 transition-colors">
+            <div 
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 transition-colors ${
+                previewUrl ? 'border-primary' : 'border-primary/20 hover:border-primary/50'
+              }`}
+            >
               {previewUrl ? (
-                <img 
-                  src={previewUrl} 
-                  alt="Preview" 
-                  className="max-w-full h-auto rounded-lg mb-4"
-                />
+                <div className="w-full">
+                  <img 
+                    src={previewUrl} 
+                    alt="Preview" 
+                    className="max-w-full h-auto rounded-lg mb-4 mx-auto"
+                  />
+                  <p className="text-sm text-gray-500 text-center mb-4">
+                    {selectedImage?.name}
+                  </p>
+                </div>
               ) : (
-                <ImagePlus className="w-12 h-12 text-gray-400 mb-4" />
+                <div className="text-center">
+                  <ImagePlus className="w-12 h-12 text-gray-400 mb-4 mx-auto" />
+                  <p className="text-sm text-gray-500 mb-4">
+                    Upload a clear photo of your pet (max 10MB)
+                  </p>
+                </div>
               )}
               <Button asChild variant="outline">
                 <label className="cursor-pointer">
@@ -102,16 +136,20 @@ const Create = () => {
           {/* Style Selection */}
           <Card className="p-6">
             <h2 className="text-2xl font-semibold mb-4">2. Choose Art Style</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {styles.map((style) => (
-                <Button
-                  key={style.id}
-                  variant={selectedStyle === style.id ? "default" : "outline"}
-                  className="w-full"
-                  onClick={() => setSelectedStyle(style.id)}
-                >
-                  {style.name}
-                </Button>
+                <div key={style.id} className="space-y-2">
+                  <Button
+                    variant={selectedStyle === style.id ? "default" : "outline"}
+                    className="w-full justify-start"
+                    onClick={() => setSelectedStyle(style.id)}
+                  >
+                    {style.name}
+                  </Button>
+                  <p className="text-sm text-gray-500 pl-2">
+                    {style.description}
+                  </p>
+                </div>
               ))}
             </div>
 
