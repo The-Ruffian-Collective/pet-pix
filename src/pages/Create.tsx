@@ -7,6 +7,7 @@ import { UserCredits } from "@/components/UserCredits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ImagePlus, Wand2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Create = () => {
   const navigate = useNavigate();
@@ -14,9 +15,11 @@ const Create = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<string>("watercolor");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is authenticated
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         navigate("/");
@@ -39,19 +42,83 @@ const Create = () => {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        alert("File size should be less than 10MB");
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 10MB",
+          variant: "destructive",
+        });
         return;
       }
       setSelectedImage(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      setGeneratedImage(null); // Reset generated image when new image is selected
     }
   };
 
   const handleGenerate = async () => {
-    // TODO: Implement image generation logic
-    console.log("Generating with style:", selectedStyle);
+    if (!selectedImage) return;
+
+    setIsGenerating(true);
+    try {
+      // First, check and update user credits
+      const { data: credits, error: creditsError } = await supabase
+        .from('user_credits')
+        .select('credits_remaining')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (creditsError) throw creditsError;
+      if (!credits || credits.credits_remaining <= 0) {
+        toast({
+          title: "No credits remaining",
+          description: "Please upgrade your plan to generate more portraits",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImage);
+      reader.onload = async () => {
+        const base64Image = reader.result as string;
+
+        // Generate portrait
+        const { data, error } = await supabase.functions.invoke('generate-pet-portrait', {
+          body: { image: base64Image, style: selectedStyle }
+        });
+
+        if (error) throw error;
+
+        // Update the generated image
+        setGeneratedImage(data.image);
+
+        // Deduct credit
+        await supabase
+          .from('user_credits')
+          .update({ 
+            credits_remaining: credits.credits_remaining - 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user?.id);
+
+        toast({
+          title: "Portrait Generated!",
+          description: "Your pet portrait has been created successfully.",
+        });
+      };
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate portrait. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (!user) return null;
@@ -131,6 +198,29 @@ const Create = () => {
                 </label>
               </Button>
             </div>
+
+            {/* Generated Image Display */}
+            {generatedImage && (
+              <div className="mt-6">
+                <h3 className="text-xl font-semibold mb-4">Generated Portrait</h3>
+                <img 
+                  src={generatedImage} 
+                  alt="Generated Portrait" 
+                  className="max-w-full h-auto rounded-lg shadow-lg"
+                />
+                <Button 
+                  className="w-full mt-4"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = generatedImage;
+                    link.download = 'pet-portrait.png';
+                    link.click();
+                  }}
+                >
+                  Download Portrait
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Style Selection */}
@@ -157,9 +247,13 @@ const Create = () => {
               className="w-full mt-8"
               size="lg"
               onClick={handleGenerate}
-              disabled={!selectedImage}
+              disabled={!selectedImage || isGenerating}
             >
-              Generate Portrait <Wand2 className="ml-2" />
+              {isGenerating ? (
+                "Generating..."
+              ) : (
+                <>Generate Portrait <Wand2 className="ml-2" /></>
+              )}
             </Button>
           </Card>
         </div>
