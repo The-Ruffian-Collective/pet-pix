@@ -13,6 +13,8 @@ import { UserCredits } from "@/components/UserCredits";
 const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [demoImage, setDemoImage] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,10 +39,28 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [toast]);
 
-  const handleCreateClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!user) {
-      e.preventDefault();
-      setShowAuthModal(true);
+  const handleDemoGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-demo-image', {
+        body: { prompt: "A cute pet portrait in watercolor style" }
+      });
+
+      if (error) throw error;
+      setDemoImage(data.image);
+      
+      toast({
+        title: "Demo Image Generated!",
+        description: "Sign up to create your own custom pet portraits.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate demo image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -78,6 +98,53 @@ const Index = () => {
           )}
         </div>
       </section>
+
+      {/* Demo Section */}
+      {!user && (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-8">Try Our AI Portrait Generator</h2>
+            <div className="max-w-md mx-auto">
+              <Card className="p-6">
+                {demoImage ? (
+                  <div className="space-y-4">
+                    <img 
+                      src={demoImage} 
+                      alt="AI Generated Pet Portrait" 
+                      className="rounded-lg shadow-lg mx-auto"
+                    />
+                    <Button 
+                      onClick={() => setShowAuthModal(true)}
+                      size="lg"
+                      className="w-full"
+                    >
+                      Create Your Own <Wand2 className="ml-2" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-4">
+                      See the magic in action! Generate a sample pet portrait.
+                    </p>
+                    <Button
+                      onClick={handleDemoGenerate}
+                      size="lg"
+                      className="w-full"
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        "Generating..."
+                      ) : (
+                        <>Try Demo <Wand2 className="ml-2" /></>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-16 bg-gray-50">

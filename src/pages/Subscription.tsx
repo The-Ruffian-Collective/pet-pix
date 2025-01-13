@@ -54,9 +54,10 @@ const Subscription = () => {
       price: "£0",
       period: "Forever",
       features: [
-        "3 AI portraits per day",
+        "5 AI portraits per month",
         "Basic art styles",
         "Standard processing time",
+        "Try demo before subscribing"
       ],
       current: subscription?.plan_type === "free",
       type: "free"
@@ -66,7 +67,7 @@ const Subscription = () => {
       price: "£4.99",
       period: "per month",
       features: [
-        "10 AI portraits per day",
+        "30 AI portraits per month",
         "All art styles",
         "Priority processing",
         "HD downloads"
@@ -79,7 +80,7 @@ const Subscription = () => {
       price: "£9.99",
       period: "per month",
       features: [
-        "30 AI portraits per day",
+        "100 AI portraits per month",
         "All art styles + exclusive styles",
         "Priority processing",
         "HD downloads",

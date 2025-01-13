@@ -70,21 +70,21 @@ export type Database = {
         Row: {
           created_at: string
           credits_remaining: number
-          last_reset_date: string
+          reset_date: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           credits_remaining?: number
-          last_reset_date?: string
+          reset_date?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           credits_remaining?: number
-          last_reset_date?: string
+          reset_date?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -96,6 +96,10 @@ export type Database = {
     }
     Functions: {
       reset_daily_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      reset_monthly_credits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
