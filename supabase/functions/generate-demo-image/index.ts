@@ -12,12 +12,17 @@ serve(async (req) => {
   }
 
   try {
+    const { prompt } = await req.json()
+    console.log('Generating demo image with prompt:', prompt)
+
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'))
 
     const image = await hf.textToImage({
-      inputs: "A cute pet portrait in watercolor style, vibrant colors",
+      inputs: prompt,
       model: 'black-forest-labs/FLUX.1-schnell',
     })
+
+    console.log('Image generated successfully')
 
     const arrayBuffer = await image.arrayBuffer()
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
