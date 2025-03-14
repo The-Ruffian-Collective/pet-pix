@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,13 +84,15 @@ const Create = () => {
             description: "Setting up your account with initial credits",
           });
           
-          // Create initial credits if not found
+          // Create initial credits if not found - with proper ISO string date
+          const resetDate = new Date(Date.now() + 24*60*60*1000); // 24 hours from now
+          
           await supabase
             .from('user_credits')
             .insert({ 
               user_id: user.id,
               credits_remaining: 5,
-              reset_date: new Date(Date.now() + 24*60*60*1000) // 24 hours from now
+              reset_date: resetDate.toISOString() // Convert Date to ISO string
             });
           
           // Retry fetching credits
@@ -161,7 +162,7 @@ const Create = () => {
             .from('user_credits')
             .update({ 
               credits_remaining: credits.credits_remaining - 1,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString() // Convert Date to ISO string
             })
             .eq('user_id', user.id);
 

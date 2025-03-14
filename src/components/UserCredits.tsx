@@ -36,12 +36,14 @@ export function UserCredits() {
           });
           
           // Create initial credits for the user
+          const resetDate = new Date(Date.now() + 24*60*60*1000); // 24 hours from now
+          
           const { error: insertError } = await supabase
             .from("user_credits")
             .insert({ 
               user_id: session.session.user.id,
               credits_remaining: 5,
-              reset_date: new Date(Date.now() + 24*60*60*1000) // 24 hours from now
+              reset_date: resetDate.toISOString() // Convert Date to ISO string format
             });
           
           if (insertError) {

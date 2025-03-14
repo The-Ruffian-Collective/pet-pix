@@ -22,7 +22,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           description: "You've successfully signed in.",
         });
         onClose();
-      } else if (event === "SIGNED_UP") {
+      } else if (event === "USER_UPDATED") {
+        // Changed from "SIGNED_UP" to "USER_UPDATED" to match the allowed event types
         toast({
           title: "Account Created!",
           description: "Welcome to Pet Artistry! You've been awarded 5 free credits.",
