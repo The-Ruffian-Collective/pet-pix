@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageUploader } from "@/components/pet-portrait/ImageUploader";
 import { StyleSelector } from "@/components/pet-portrait/StyleSelector";
 import { portraitStyles } from "@/utils/portraitStyles";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Create = () => {
   const navigate = useNavigate();
@@ -19,15 +20,25 @@ const Create = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to access this feature",
+          variant: "destructive",
+        });
         navigate("/");
       } else {
         setUser(session.user);
       }
-    });
+    };
+
+    checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
@@ -38,7 +49,7 @@ const Create = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleImageSelected = (file: File | null) => {
     if (file) {
@@ -50,24 +61,67 @@ const Create = () => {
   };
 
   const handleGenerate = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !user) return;
 
     setIsGenerating(true);
+    toast({
+      title: "Generating Portrait",
+      description: "Please wait while we create your pet portrait...",
+    });
+    
     try {
-      // First, check and update user credits
+      // First, check user credits
       const { data: credits, error: creditsError } = await supabase
         .from('user_credits')
         .select('credits_remaining')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
 
-      if (creditsError) throw creditsError;
-      if (!credits || credits.credits_remaining <= 0) {
+      if (creditsError) {
+        console.error('Credits error:', creditsError);
+        if (creditsError.code === 'PGRST116') {
+          toast({
+            title: "No credits found",
+            description: "Setting up your account with initial credits",
+          });
+          
+          // Create initial credits if not found
+          await supabase
+            .from('user_credits')
+            .insert({ 
+              user_id: user.id,
+              credits_remaining: 5,
+              reset_date: new Date(Date.now() + 24*60*60*1000) // 24 hours from now
+            });
+          
+          // Retry fetching credits
+          const { data: newCredits, error: newCreditsError } = await supabase
+            .from('user_credits')
+            .select('credits_remaining')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (newCreditsError) throw newCreditsError;
+          
+          if (newCredits.credits_remaining <= 0) {
+            toast({
+              title: "No credits remaining",
+              description: "Please upgrade your plan to generate more portraits",
+              variant: "destructive",
+            });
+            setIsGenerating(false);
+            return;
+          }
+        } else {
+          throw creditsError;
+        }
+      } else if (!credits || credits.credits_remaining <= 0) {
         toast({
           title: "No credits remaining",
           description: "Please upgrade your plan to generate more portraits",
           variant: "destructive",
         });
+        setIsGenerating(false);
         return;
       }
 
@@ -77,29 +131,55 @@ const Create = () => {
       reader.onload = async () => {
         const base64Image = reader.result as string;
 
-        // Generate portrait
-        const { data, error } = await supabase.functions.invoke('generate-pet-portrait', {
-          body: { image: base64Image, style: selectedStyle }
-        });
+        // Get the session token for authorization
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to generate portraits",
+            variant: "destructive",
+          });
+          setIsGenerating(false);
+          return;
+        }
 
-        if (error) throw error;
+        try {
+          // Generate portrait
+          const { data, error } = await supabase.functions.invoke('generate-pet-portrait', {
+            body: { image: base64Image, style: selectedStyle }
+          });
 
-        // Update the generated image
-        setGeneratedImage(data.image);
+          if (error) throw error;
+          if (!data?.image) throw new Error("No image returned from the API");
 
-        // Deduct credit
-        await supabase
-          .from('user_credits')
-          .update({ 
-            credits_remaining: credits.credits_remaining - 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user?.id);
+          // Update the generated image
+          setGeneratedImage(data.image);
 
-        toast({
-          title: "Portrait Generated!",
-          description: "Your pet portrait has been created successfully.",
-        });
+          // Deduct credit
+          await supabase
+            .from('user_credits')
+            .update({ 
+              credits_remaining: credits.credits_remaining - 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          // Refresh credits data
+          queryClient.invalidateQueries({ queryKey: ["credits"] });
+
+          toast({
+            title: "Portrait Generated!",
+            description: "Your pet portrait has been created successfully.",
+          });
+        } catch (error) {
+          console.error('Generation error:', error);
+          toast({
+            title: "Generation Failed",
+            description: "Failed to generate portrait. Please try again.",
+            variant: "destructive",
+          });
+        }
       };
     } catch (error) {
       console.error('Error:', error);

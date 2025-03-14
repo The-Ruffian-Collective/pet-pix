@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2'
 
@@ -15,7 +16,19 @@ serve(async (req) => {
     const { prompt } = await req.json()
     console.log('Generating demo image with prompt:', prompt)
 
-    const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'))
+    const token = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN')
+    if (!token) {
+      console.error('HUGGING_FACE_ACCESS_TOKEN is not set')
+      return new Response(
+        JSON.stringify({ error: 'Missing API configuration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    const hf = new HfInference(token)
+
+    // Log the token status (careful not to log the actual token)
+    console.log('HuggingFace token available:', !!token)
 
     const image = await hf.textToImage({
       inputs: prompt,
@@ -32,7 +45,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error during demo image generation:', error)
     return new Response(
       JSON.stringify({ error: 'Failed to generate demo image', details: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
